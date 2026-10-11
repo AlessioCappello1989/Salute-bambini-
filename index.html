@@ -53,7 +53,7 @@ details summary{cursor:pointer;color:var(--acc);font-weight:700;padding:6px 0}
 <div id="view"></div>
 <div id="dlg"></div>
 <p class="note">Dosi e intervalli vanno presi dal foglietto illustrativo o dal pediatra: l'app non li suggerisce, ti aiuta solo a tenerne traccia. Le notifiche arrivano solo con la pagina aperta; per un promemoria preciso usa «Aggiungi al Calendario».</p>
-<div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti i dati e i farmaci salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Invia backup via email»: si apre la tua app di posta con i dati già scritti, ti basta premere «Invia».</div>
+<div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti i dati e i farmaci salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Invia backup via email» (per ripristinarlo usa «Ripristina backup»): si apre la tua app di posta con i dati già scritti, ti basta premere «Invia».</div>
 <script>
 var S={kids:[],meds:[],logs:[],vacc:[]},kid=null,tab='farmaci';
 try{var raw=localStorage.getItem('dsb');if(raw)S=JSON.parse(raw)}catch(e){}
@@ -215,11 +215,11 @@ function vCal(){var ev=[],mids={};S.meds.filter(function(m){return m.kid==kid}).
 function renderAlerts(){var h=storeOK?'':'<div class="al" role="alert"><b>Salvataggio non disponibile</b>Il browser non permette di salvare i dati: usa «Invia backup via email» per non perderli.</div>';dueList().forEach(function(d){h+='<div class="al" role="alert"><b>'+esc(d.m.name)+' per '+esc(d.k?d.k.name:'')+'</b>Sono passate '+d.m.hours+' h dall\'ultima dose ('+hm(d.l.t)+'). Si può dare la prossima dose'+(d.m.dose?' ('+esc(d.m.dose)+')':'')+', se serve.<div class="g2"><button onclick="give(\''+d.m.id+'\')">Dato adesso</button><button onclick="ack(\''+d.l.id+'\')">Ok, non serve</button></div></div>'});$('alerts').innerHTML=h}
 function render(){renderAlerts();var kh='';S.kids.forEach(function(k){kh+='<button class="chip'+(k.id==kid?' on':'')+'" onclick="kid=\''+k.id+'\';render()">'+esc(k.name)+'</button>'});
  $('kids').innerHTML=kh+'<button class="chip" onclick="addKid()">+ Bambino</button>';
- if(!kid){$('tabs').innerHTML='';$('view').innerHTML='<p>Inizia aggiungendo un bambino con il pulsante «+ Bambino», oppure ripristina un backup.</p><button class="btn ghost" onclick="mailBackup()">Invia backup via email</button>';return}
+ if(!kid){$('tabs').innerHTML='';$('view').innerHTML='<p>Inizia aggiungendo un bambino con il pulsante «+ Bambino», oppure ripristina un backup.</p><button class="btn" onclick="restoreDlg()">Ripristina backup</button><button class="btn ghost" onclick="mailBackup()">Invia backup via email</button>';return}
  var T={farmaci:'Farmaci',vaccini:'Vaccini',calendario:'Calendario',profilo:'Profilo'},th='';
  for(var k in T)th+='<button class="tab'+(k==tab?' on':'')+'" onclick="tab=\''+k+'\';render()">'+T[k]+'</button>';
  $('tabs').innerHTML=th;
- $('view').innerHTML=(tab=='farmaci'?vFarmaci():tab=='vaccini'?vVacc():tab=='profilo'?vProf():vCal())+'<button class="btn ghost" onclick="mailBackup()" style="margin-top:24px">Invia backup via email</button><button class="btn ghost" onclick="delKid()">Elimina questo bambino</button>'}
+ $('view').innerHTML=(tab=='farmaci'?vFarmaci():tab=='vaccini'?vVacc():tab=='profilo'?vProf():vCal())+'<button class="btn ghost" onclick="mailBackup()" style="margin-top:24px">Invia backup via email</button><button class="btn ghost" onclick="restoreDlg()">Ripristina backup</button><button class="btn ghost" onclick="delKid()">Elimina questo bambino</button>'}
 render();checkNotif();
 try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
 </script>
