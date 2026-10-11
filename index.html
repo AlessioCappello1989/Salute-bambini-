@@ -53,7 +53,7 @@ details summary{cursor:pointer;color:var(--acc);font-weight:700;padding:6px 0}
 <div id="view"></div>
 <div id="dlg"></div>
 <p class="note">Dosi e intervalli vanno presi dal foglietto illustrativo o dal pediatra: l'app non li suggerisce, ti aiuta solo a tenerne traccia. Le notifiche arrivano solo con la pagina aperta; per un promemoria preciso usa «Aggiungi al Calendario».</p>
-<div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti i dati e i farmaci salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Backup dati», copia il testo e incollalo in un blocco note.</div>
+<div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti i dati e i farmaci salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Invia backup via email»: si apre la tua app di posta con i dati già scritti, ti basta premere «Invia».</div>
 <script>
 var S={kids:[],meds:[],logs:[],vacc:[]},kid=null,tab='farmaci';
 try{var raw=localStorage.getItem('dsb');if(raw)S=JSON.parse(raw)}catch(e){}
@@ -61,9 +61,18 @@ if(S.kids.length)kid=S.kids[0].id;
 var storeOK=true;
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 function save(){try{localStorage.setItem('dsb',JSON.stringify(S));storeOK=true}catch(e){storeOK=false}}
-function backup(){var j=JSON.stringify(S);
- dlg('<b>Backup dati</b><p class="mut">Copia questo testo e conservalo (ad esempio nelle note). Per ripristinare, incollalo qui sotto e premi «Ripristina».</p><textarea id="bk" rows="6" style="width:100%;font-size:.75rem;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:8px">'+esc(j)+'</textarea><button class="btn ghost" onclick="var t=$(\'bk\');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand(\'copy\')}catch(x){}}this.textContent=\'Copiato\'">Copia testo</button>',
- function(){try{var d=JSON.parse($('bk').value);if(!d||!d.kids||!d.meds||!d.logs||!d.vacc)throw 0;S=d;kid=S.kids.length?S.kids[0].id:null;save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
+function mailBackup(){var em='';try{em=localStorage.getItem('dsb_mail')||''}catch(e){}
+ dlg('<b>Backup via email</b><p class="mut">Si apre la tua app di posta con il backup già scritto: devi solo premere «Invia».</p><label>La tua email (la ricorda per le prossime volte)</label><input id="bm" type="email" inputmode="email" autocomplete="email" placeholder="nome@esempio.it" value="'+esc(em)+'"><button class="btn ghost" onclick="restoreDlg()">Ripristina da un backup</button>',
+ function(){var to=$('bm').value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){info('Inserisci un indirizzo email valido.');return false}
+  try{localStorage.setItem('dsb_mail',to)}catch(e){}
+  var d=new Date().toLocaleDateString('it-IT'),lines=[];
+  S.kids.forEach(function(k){lines.push(k.name+(k.blood?' ('+k.blood+')':''));S.meds.filter(function(m){return m.kid==k.id}).forEach(function(m){lines.push('  - '+m.name+(m.dose?', '+m.dose:'')+', ogni '+m.hours+' h')})});
+  var json=JSON.stringify(S),head='Backup Diario salute bimbi del '+d+'\n\n'+lines.join('\n')+'\n\nDATI DEL BACKUP (non modificare, serve per ripristinare):\n',
+  body=head+json,url='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent('Backup Diario salute bimbi '+d)+'&body=',full=url+encodeURIComponent(body);
+  if(full.length>7000){try{navigator.clipboard.writeText(json)}catch(e){}full=url+encodeURIComponent('Backup Diario salute bimbi del '+d+'.\n\nI dati sono troppo lunghi per l\'email: sono stati copiati negli appunti. Incollali qui sotto prima di inviare.\n\n')}
+  location.href=full},'Apri app di posta')}
+function restoreDlg(){dlg('<b>Ripristina backup</b><p class="mut">Incolla qui il testo del backup (anche l\'intera email). Attenzione: sostituisce i dati attuali.</p><textarea id="bk" rows="6" style="width:100%;font-size:.75rem;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:8px"></textarea>',
+ function(){try{var t=$('bk').value,i=t.indexOf('{"kids"'),j=t.lastIndexOf('}');if(i<0)i=t.indexOf('{');var d=JSON.parse(t.slice(i,j+1));if(!d||!d.kids||!d.meds||!d.logs||!d.vacc)throw 0;S=d;kid=S.kids.length?S.kids[0].id:null;save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
@@ -203,14 +212,14 @@ function vCal(){var ev=[],mids={};S.meds.filter(function(m){return m.kid==kid}).
  var td=ev.filter(function(e){return e.todo}).sort(function(a,b){return a.t-b.t}),dn=ev.filter(function(e){return !e.todo}).sort(function(a,b){return b.t-a.t});
  function grp(list){var h='',last='';list.forEach(function(e){var d=dayKey(e.t);if(d!=last){h+='<div class="day">'+d+'</div>';last=d}h+='<div class="card" style="margin:4px 0;padding:8px 12px">'+e.txt+'</div>'});return h}
  return '<h2 class="sec">Da fare</h2>'+(td.length?grp(td):'<p class="mut">Nessun vaccino da fare.</p>')+'<h2 class="sec">Fatti</h2>'+(dn.length?grp(dn):'<p class="mut">Ancora nulla di registrato.</p>')}
-function renderAlerts(){var h=storeOK?'':'<div class="al" role="alert"><b>Salvataggio non disponibile</b>Il browser non permette di salvare i dati: usa «Backup dati» per non perderli.</div>';dueList().forEach(function(d){h+='<div class="al" role="alert"><b>'+esc(d.m.name)+' per '+esc(d.k?d.k.name:'')+'</b>Sono passate '+d.m.hours+' h dall\'ultima dose ('+hm(d.l.t)+'). Si può dare la prossima dose'+(d.m.dose?' ('+esc(d.m.dose)+')':'')+', se serve.<div class="g2"><button onclick="give(\''+d.m.id+'\')">Dato adesso</button><button onclick="ack(\''+d.l.id+'\')">Ok, non serve</button></div></div>'});$('alerts').innerHTML=h}
+function renderAlerts(){var h=storeOK?'':'<div class="al" role="alert"><b>Salvataggio non disponibile</b>Il browser non permette di salvare i dati: usa «Invia backup via email» per non perderli.</div>';dueList().forEach(function(d){h+='<div class="al" role="alert"><b>'+esc(d.m.name)+' per '+esc(d.k?d.k.name:'')+'</b>Sono passate '+d.m.hours+' h dall\'ultima dose ('+hm(d.l.t)+'). Si può dare la prossima dose'+(d.m.dose?' ('+esc(d.m.dose)+')':'')+', se serve.<div class="g2"><button onclick="give(\''+d.m.id+'\')">Dato adesso</button><button onclick="ack(\''+d.l.id+'\')">Ok, non serve</button></div></div>'});$('alerts').innerHTML=h}
 function render(){renderAlerts();var kh='';S.kids.forEach(function(k){kh+='<button class="chip'+(k.id==kid?' on':'')+'" onclick="kid=\''+k.id+'\';render()">'+esc(k.name)+'</button>'});
  $('kids').innerHTML=kh+'<button class="chip" onclick="addKid()">+ Bambino</button>';
- if(!kid){$('tabs').innerHTML='';$('view').innerHTML='<p>Inizia aggiungendo un bambino con il pulsante «+ Bambino», oppure ripristina un backup.</p><button class="btn ghost" onclick="backup()">Backup dati</button>';return}
+ if(!kid){$('tabs').innerHTML='';$('view').innerHTML='<p>Inizia aggiungendo un bambino con il pulsante «+ Bambino», oppure ripristina un backup.</p><button class="btn ghost" onclick="mailBackup()">Invia backup via email</button>';return}
  var T={farmaci:'Farmaci',vaccini:'Vaccini',calendario:'Calendario',profilo:'Profilo'},th='';
  for(var k in T)th+='<button class="tab'+(k==tab?' on':'')+'" onclick="tab=\''+k+'\';render()">'+T[k]+'</button>';
  $('tabs').innerHTML=th;
- $('view').innerHTML=(tab=='farmaci'?vFarmaci():tab=='vaccini'?vVacc():tab=='profilo'?vProf():vCal())+'<button class="btn ghost" onclick="backup()" style="margin-top:24px">Backup dati</button><button class="btn ghost" onclick="delKid()">Elimina questo bambino</button>'}
+ $('view').innerHTML=(tab=='farmaci'?vFarmaci():tab=='vaccini'?vVacc():tab=='profilo'?vProf():vCal())+'<button class="btn ghost" onclick="mailBackup()" style="margin-top:24px">Invia backup via email</button><button class="btn ghost" onclick="delKid()">Elimina questo bambino</button>'}
 render();checkNotif();
 try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
 </script>
